@@ -262,9 +262,7 @@ def ignores_match(pkt, mismatched, ignore):
 					unmatched_rules.remove(regex)
 				break
 
-	if unmatched_av or unmatched_rules:
-		return False
-	return True
+	return not unmatched_av and not unmatched_rules
 
 def matches(req, sniffed_pkt, test_pkt):
 	"""Determine whether a response from the test server matches
@@ -273,20 +271,16 @@ def matches(req, sniffed_pkt, test_pkt):
 
 	global IGNORE
 
-	mis_attrs_sniffed = []
-	for k in sniffed_pkt.keys():
-		if sorted(sniffed_pkt[k]) == sorted(test_pkt.get(k, [])):
-			continue
-		mis_attrs_sniffed.append('%s=%s' % (
-			k, ', '.join([str(v) for v in sorted(sniffed_pkt[k])])))
-
-	mis_attrs_test = []
-	for k in test_pkt.keys():
-		if sorted(test_pkt[k]) == sorted(sniffed_pkt.get(k, [])):
-			continue
-		mis_attrs_test.append('%s=%s' % (
-			k, ', '.join([str(v) for v in sorted(test_pkt[k])])))
-
+	mis_attrs_sniffed = [
+		f"{k}={', '.join([str(v) for v in sorted(sniffed_pkt[k])])}"
+		for k in sniffed_pkt.keys()
+		if sorted(sniffed_pkt[k]) != sorted(test_pkt.get(k, []))
+	]
+	mis_attrs_test = [
+		f"{k}={', '.join([str(v) for v in sorted(test_pkt[k])])}"
+		for k in test_pkt.keys()
+		if sorted(test_pkt[k]) != sorted(sniffed_pkt.get(k, []))
+	]
 	# The packets match without having to consider any ignores.
 	if sniffed_pkt.code == test_pkt.code and \
 	   not mis_attrs_sniffed and not mis_attrs_test:
