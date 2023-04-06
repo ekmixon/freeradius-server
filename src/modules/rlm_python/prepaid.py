@@ -36,7 +36,7 @@ dbHandle = None
 
 def log(level, s):
     """Log function."""
-    freeradius.radlog(level, "prepaid.py: " + s)
+    freeradius.radlog(level, f"prepaid.py: {s}")
 
 
 def instantiate(p):
@@ -53,7 +53,7 @@ def instantiate(p):
         log(freeradius.L_ERR, str(e))
         return -1
 
-    log(freeradius.L_INFO, "db connection: " + str(dbHandle))
+    log(freeradius.L_INFO, f"db connection: {str(dbHandle)}")
 
     return 0
 
@@ -74,7 +74,7 @@ def authorize(authData):
     # Build and log the SQL statement
     # freeradius puts double quotes (") around the string representation of
     # the RADIUS packet.
-    sql = "select passwd, maxseconds from users where username = " + userName
+    sql = f"select passwd, maxseconds from users where username = {userName}"
 
     log(freeradius.L_DBG, sql)
 
@@ -98,14 +98,14 @@ def authorize(authData):
     result = dbCursor.fetchone()
     if not result:
         # User not found
-        log(freeradius.L_INFO, "user not found: " + userName)
+        log(freeradius.L_INFO, f"user not found: {userName}")
         dbCursor.close()
         return freeradius.RLM_MODULE_NOTFOUND
 
     # Compare passwords
     # Ignore the quotes around userPasswd.
     if result[0] != userPasswd[1:-1]:
-        log(freeradius.L_DBG, "user password mismatch: " + userName)
+        log(freeradius.L_DBG, f"user password mismatch: {userName}")
         return freeradius.RLM_MODULE_REJECT
 
     maxSeconds = result[1]
@@ -113,7 +113,7 @@ def authorize(authData):
     # Compute their session limit
 
     # Build and log the SQL statement
-    sql = "select sum(seconds) from sessions where username = " + userName
+    sql = f"select sum(seconds) from sessions where username = {userName}"
 
     log(freeradius.L_DBG, sql)
 
@@ -127,12 +127,7 @@ def authorize(authData):
 
     # Get the result. (sum,)
     result = dbCursor.fetchone()
-    if (not result) or (not result[0]):
-        # No usage yet
-        secondsUsed = 0
-    else:
-        secondsUsed = result[0]
-
+    secondsUsed = 0 if (not result) or (not result[0]) else result[0]
     # Done with cursor
     dbCursor.close()
 
@@ -141,7 +136,7 @@ def authorize(authData):
 
     if sessionTimeout <= 0:
         # No more time, reject outright
-        log(freeradius.L_INFO, "user out of time: " + userName)
+        log(freeradius.L_INFO, f"user out of time: {userName}")
         return freeradius.RLM_MODULE_REJECT
 
     # Log the success
@@ -235,7 +230,7 @@ def detach():
     """Detach and clean up."""
     # Shut down the database connection.
     global dbHandle
-    log(freeradius.L_DBG, "closing database handle: " + str(dbHandle))
+    log(freeradius.L_DBG, f"closing database handle: {str(dbHandle)}")
     dbHandle.close()
 
     return freeradius.RLM_MODULE_OK

@@ -12,6 +12,5 @@ def authorize(p):
     )
     if hasattr(local, "tls"):
         return freeradius.RLM_MODULE_OK
-    else:
-        local.tls = True
-        return freeradius.RLM_MODULE_NOOP
+    local.tls = True
+    return freeradius.RLM_MODULE_NOOP

@@ -56,26 +56,26 @@ except Exception as e:
 def unit_lookup_payload2attrs(proto, payload):
     # Generating lookup file
     fp = tempfile.NamedTemporaryFile(mode="w+", delete=False)
-    fp.write("# Using {}\n".format(fp.name))
-    fp.write("proto {}\n".format(proto))
-    fp.write("proto-dictionary {}\n".format(proto))
+    fp.write(f"# Using {fp.name}\n")
+    fp.write(f"proto {proto}\n")
+    fp.write(f"proto-dictionary {proto}\n")
     fp.write("\n")
-    fp.write("decode-proto {}\n".format(payload))
+    fp.write(f"decode-proto {payload}\n")
     fp.write("match Packet-Type = 1\n")
     fp.flush()
     fp.close()
 
     # call the unit_test_attribute
-    cmd_unit = "{} {}".format(unit_attr, fp.name)
+    cmd_unit = f"{unit_attr} {fp.name}"
     cmd_out = os.popen(cmd_unit).read()
     os.remove(fp.name)
 
     match = re.search(r"(.\sgot\s+:)\s(.*)", cmd_out)
     if not match:
-        eprint("# ERROR: We didn't find the 'got' token in: {}".format(cmd_out))
+        eprint(f"# ERROR: We didn't find the 'got' token in: {cmd_out}")
         return None
 
-    return match.group(2)
+    return match[2]
 
 
 def load_args():
@@ -111,28 +111,23 @@ def load_args():
 def _main():
     try:
         args = load_args()
-        count_pkt = 0
-        count_mat = 0
         pcap = rdpcap(args.pcap_file)
 
         print("#  -*- text -*-")
         print("#  ATTENTION: It was generated automatically, be careful! :)")
         if args.source:
-            print("#  Based on {}".format(args.source))
+            print(f"#  Based on {args.source}")
         else:
-            print("#  Based on {}".format(os.path.basename(args.pcap_file)))
+            print(f"#  Based on {os.path.basename(args.pcap_file)}")
         print("#")
         print("")
-        print("proto {}".format(args.decode_proto))
-        print("proto-dictionary {}".format(args.decode_proto))
+        print(f"proto {args.decode_proto}")
+        print(f"proto-dictionary {args.decode_proto}")
         print("")
-        count_mat += 2
-
-        for pkt in pcap:
-            # statements
-            count_pkt += 1
+        count_mat = 0 + 2
+        for count_pkt, pkt in enumerate(pcap, start=1):
             print("#")
-            print("#  {}.".format(count_pkt))
+            print(f"#  {count_pkt}.")
             print("#")
 
             # get the payload description, remove '#' and trim() spaces.
@@ -142,40 +137,36 @@ def _main():
             packet_desc = re.sub(" $", "", packet_desc, flags=re.MULTILINE)
             print(packet_desc.strip())
 
-            # Convert the payload to hex separated by space.
-            payload = ""
-            for d in app.build():
-                payload += "{:02x} ".format(d)
-
+            payload = "".join("{:02x} ".format(d) for d in app.build())
             # trim the left/right
             payload = payload.strip()
 
             # lookup the attrs from the payload
             attrs = unit_lookup_payload2attrs(args.decode_proto, payload)
             if not attrs:
-                raise Exception("Error", "Problems to convert the payload to attrs for: -p {} -f {}".format(args.decode_proto, args.pcap_file))
+                raise Exception(
+                    "Error",
+                    f"Problems to convert the payload to attrs for: -p {args.decode_proto} -f {args.pcap_file}",
+                )
 
             if args.both:
                 count_mat += 4
-                print("encode-proto {}".format(attrs))
-                print("match {}".format(payload))
+                print(f"encode-proto {attrs}")
+                print(f"match {payload}")
                 print("")
                 print("decode-proto -")
-                print("match {}".format(attrs))
-                print("")
             else:
                 count_mat += 2
-                print("decode-proto {}".format(payload))
-                print("match {}".format(attrs))
-                print("")
-
+                print(f"decode-proto {payload}")
+            print(f"match {attrs}")
+            print("")
         # append the 'count'
         print("count")
-        print("match {}".format(count_mat))
+        print(f"match {count_mat}")
         print("")
 
     except Exception as e:
-        eprint("** ERROR: Something wrong:\n {}\n".format(str(e)))
+        eprint(f"** ERROR: Something wrong:\n {str(e)}\n")
         traceback.print_exc()
         sys.exit(-1)
 
